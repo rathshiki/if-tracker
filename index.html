@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>IF 16/8 & Fitness Cloud Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      background-color: #0b1120;
+      color: #f1f5f9;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.78);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    input[type="time"], input[type="date"], input[type="number"], input[type="text"] {
+      color-scheme: dark;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    @keyframes pulse-soft {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.55; }
+    }
+    .animate-pulse-soft {
+      animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-24 md:pb-12">
+
+  <!-- Top Header & Cloud Status Bar -->
+  <header class="sticky top-0 z-30 glass-card border-b border-slate-800/80 px-4 py-3">
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center font-bold text-slate-950 text-lg shadow-lg shadow-emerald-500/20">
+          IF
+        </div>
+        <div>
+          <h1 class="font-bold text-base md:text-lg leading-tight flex items-center gap-2">
+            IF 16/8 & Body Recomp
+            <span id="ifModeBadge" class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">16/8</span>
+          </h1>
+          <p class="text-xs text-slate-400">เป้าหมาย 95 ➔ 75-85 กก. | โปรตีน 165g | น้ำ 3,000 มล.</p>
+        </div>
+      </div>
+
+      <!-- Cloud Sync Status & Settings Trigger -->
+      <div class="flex items-center gap-2">
+        <button onclick="triggerManualSync()" id="syncNowBtn" title="กดเพื่อซิงก์ข้อมูลกับ Cloud ทันที" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-xs font-medium transition">
+          <span id="syncDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span id="syncStatusText">Local Mode</span>
+        </button>
+        <button onclick="openCloudModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/25 transition">
+          ☁️ ตั้งค่า Cloud Sync
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 pt-4 space-y-5">
+
+    <!-- Date Selector & Wake-Up Quick Presets -->
+    <section class="glass-card rounded-2xl p-4 shadow-xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <!-- Date Navigator -->
+        <div class="flex items-center gap-2">
+          <button onclick="changeDate(-1)" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition" title="วันก่อนหน้า">◀</button>
+          <input type="date" id="datePicker" onchange="onDatePick(this.value)" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-semibold text-emerald-300 focus:outline-none focus:border-emerald-500" />
+          <button onclick="changeDate(1)" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition" title="วันถัดไป">▶</button>
+          <button onclick="goToToday()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 transition">วันนี้</button>
+        </div>
+
+        <!-- Wake Up & Sleep Time Controls -->
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          <div class="flex items-center gap-1.5 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800">
+            <span class="text-amber-400">☀️ ตื่นวันนี้:</span>
+            <input type="time" id="wakeTimeInput" onchange="updateWakeSleepTime()" class="bg-transparent font-semibold text-white focus:outline-none" />
+          </div>
+          <div class="flex items-center gap-1.5 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800">
+            <span class="text-indigo-400">🌙 เข้านอน:</span>
+            <input type="time" id="sleepTimeInput" onchange="updateWakeSleepTime()" class="bg-transparent font-semibold text-white focus:outline-none" />
+          </div>
+          <button onclick="autoShiftByWakeTime()" class="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-medium transition">
+            🪄 จัดเวลาเดิน & น้ำตามเวลาตื่น
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Presets Row -->
+      <div class="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+        <span class="text-xs text-slate-400 mr-1">พรีเซ็ตเปลี่ยนตารางรายวัน:</span>
+        <button onclick="applyPreset('standard')" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition">
+          🏡 วันปกติ (ตื่น 08:00 | เดิน 08:30-09:00 | IF 11:00-19:00)
+        </button>
+        <button onclick="applyPreset('early04')" class="text-xs px-3 py-1.5 rounded-xl bg-emerald-600/25 hover:bg-emerald-600/35 border border-emerald-500/40 text-emerald-300 font-medium transition">
+          🌅 ตื่นเช้า 04:00 (เดิน 04:00-05:00 | IF 10:00-18:00)
+        </button>
+        <button onclick="applyPreset('nightLift')" class="text-xs px-3 py-1.5 rounded-xl bg-indigo-600/25 hover:bg-indigo-600/35 border border-indigo-500/40 text-indigo-300 font-medium transition">
+          🏋️‍♂️ เวทช่วงค่ำ (เดินเช้า 08:30 | ยกเวท 20:00-21:00)
+        </button>
+      </div>
+    </section>
+
+    <!-- Dynamic Master Timeline of the Day -->
+    <section class="glass-card rounded-2xl p-4 shadow-xl">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+          <span>⏱️ ไทม์ไลน์ตารางชีวิตของวันที่เลือก (เรียงอัตโนมัติตามเวลาที่คุณแก้)</span>
+        </h2>
+        <span id="currentClockDisplay" class="text-xs font-mono text-emerald-400 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">00:00:00</span>
+      </div>
+      <div id="masterTimeline" class="flex gap-2.5 overflow-x-auto custom-scroll py-2"></div>
+    </section>
+
+    <!-- Top Grid: IF Timer & Hydration Tracker -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+      <!-- IF 16/8 Real-time Window Card (5 cols) -->
+      <section class="lg:col-span-5 glass-card rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-bold text-base flex items-center gap-2">
+              🔥 หน้าต่าง IF ประจำวัน
+            </h2>
+            <div class="flex gap-1">
+              <button onclick="setIfProtocol(16,8)" id="btn168" class="text-xs px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-semibold">16/8</button>
+              <button onclick="setIfProtocol(18,6)" id="btn186" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">18/6</button>
+            </div>
+          </div>
+
+          <!-- Circular / Visual Status Box -->
+          <div class="my-4 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 text-center relative overflow-hidden">
+            <div id="ifStateBadge" class="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              กำลังคำนวณสถานะ...
+            </div>
+            <div id="ifCountdownText" class="text-3xl md:text-4xl font-bold font-mono tracking-tight text-white my-1">
+              00:00:00
+            </div>
+            <p id="ifSubLabel" class="text-xs text-slate-400">ช่วงเวลาทานอาหาร 11:00 - 19:00 น.</p>
+
+            <!-- Progress Bar -->
+            <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden mt-3">
+              <div id="ifProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500" style="width: 50%"></div>
+            </div>
+          </div>
+
+          <!-- Editable Eating Window for Selected Day -->
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
+              <label class="text-slate-400 block mb-1">🍽️ เริ่มมื้อแรก (เปิด IF):</label>
+              <input type="time" id="eatStartInput" onchange="updateEatingWindow('start')" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 font-semibold text-emerald-300" />
+            </div>
+            <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
+              <label class="text-slate-400 block mb-1">🔒 จบมื้อสุดท้าย (ปิด IF):</label>
+              <input type="time" id="eatEndInput" onchange="updateEatingWindow('end')" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 font-semibold text-rose-300" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Weight Log for Selected Day -->
+        <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+          <div class="text-xs">
+            <span class="text-slate-400 block">⚖️ น้ำหนักเช้าวันนี้ (กก.):</span>
+            <span class="text-[11px] text-emerald-400">เป้าหมาย: 75.0 - 85.0 กก.</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="number" step="0.1" id="dailyWeightInput" onchange="updateDailyWeight(this.value)" placeholder="95.5" class="w-24 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-bold text-center text-white" />
+            <span class="text-xs text-slate-400">กก.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Hydration Tracker & Sound Reminder (7 cols) -->
+      <section class="lg:col-span-7 glass-card rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+        <div>
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h2 class="font-bold text-base flex items-center gap-2">
+                💧 ตารางดื่มน้ำ & แจ้งเตือน <span id="waterTotalBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">0 / 3,000 มล.</span>
+              </h2>
+              <p class="text-xs text-slate-400">คลิกแก้เวลาหรือปริมาณน้ำในแต่ละรอบได้ตามเวลาตื่นจริง</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="toggleWaterAlarm()" id="waterAlarmBtn" class="text-xs px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-medium transition">
+                🔔 เปิดเสียงเตือนทุก 60 นาที
+              </button>
+              <button onclick="playNotificationChime(true)" class="text-xs px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition" title="ทดสอบเสียง">
+                🔊 ทดสอบเสียง
+              </button>
+            </div>
+          </div>
+
+          <!-- Water Progress Bar -->
+          <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden mb-4 border border-slate-800">
+            <div id="waterProgressBar" class="h-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-300" style="width: 0%"></div>
+          </div>
+
+          <!-- Water Checklist Items -->
+          <div id="waterListContainer" class="space-y-2 max-h-72 overflow-y-auto custom-scroll pr-1"></div>
+        </div>
+
+        <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+          <button onclick="addWaterSlot()" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 transition">
+            + เพิ่มรอบดื่มน้ำ
+          </button>
+          <span id="nextWaterAlertText" class="text-xs text-slate-400">งดเตือนอัตโนมัติหลัง 21:30 น. เพื่อการนอนหลับสนิท</span>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Bottom Grid: Meal Plan & Workout Checklist -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+      <!-- High-Protein Meal Plan Checklist (6 cols) -->
+      <section class="lg:col-span-6 glass-card rounded-2xl p-5 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="font-bold text-base flex items-center gap-2">
+              🍗 ตารางอาหาร & โปรตีนรายวัน
+            </h2>
+            <p class="text-xs text-slate-400">เป้าพลังงาน ~1,950 kcal | โปรตีน 160-170 กรัม</p>
+          </div>
+          <div class="flex gap-2 text-xs">
+            <span id="calTotalBadge" class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">0 kcal</span>
+            <span id="proTotalBadge" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">โปรตีน 0g</span>
+          </div>
+        </div>
+
+        <div id="mealListContainer" class="space-y-2.5"></div>
+
+        <div class="mt-3 pt-3 border-t border-slate-800/80 flex justify-between items-center">
+          <button onclick="addMealSlot()" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 transition">
+            + เพิ่มมื้ออาหาร / ของว่าง
+          </button>
+          <span class="text-[11px] text-slate-400">คลิกแก้เวลา ชื่อเมนู แคลอรี และโปรตีนได้เลย</span>
+        </div>
+      </section>
+
+      <!-- Home Workout & Timers (6 cols) -->
+      <section class="lg:col-span-6 glass-card rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+        <div>
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h2 class="font-bold text-base flex items-center gap-2">
+                🏋️‍♂️ ตารางออกกำลังกายประจำวัน
+              </h2>
+              <p class="text-xs text-slate-400">ปรับเวลาเดิน 04:00-05:00, 08:30-09:00 หรือเวทช่วงค่ำได้อิสระ</p>
+            </div>
+            <span id="workoutDoneBadge" class="text-xs px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold">0/0 รายการ</span>
+          </div>
+
+          <!-- Active Timers Bar (Walk Timer & 90s Rest Timer) -->
+          <div class="grid grid-cols-2 gap-2.5 mb-4">
+            <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+              <div>
+                <span class="text-[11px] text-slate-400 block">🦺 จับเวลาเดินถ่วงน้ำหนัก</span>
+                <span id="walkTimerDisplay" class="text-lg font-mono font-bold text-emerald-400">30:00</span>
+              </div>
+              <div class="flex gap-1">
+                <button onclick="toggleWalkTimer()" id="walkTimerBtn" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white">เริ่ม</button>
+                <button onclick="resetWalkTimer()" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">รีเซ็ต</button>
+              </div>
+            </div>
+
+            <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+              <div>
+                <span class="text-[11px] text-slate-400 block">⏱️ พักเซตเวท (90 วิ)</span>
+                <span id="restTimerDisplay" class="text-lg font-mono font-bold text-amber-400">01:30</span>
+              </div>
+              <div class="flex gap-1">
+                <button onclick="startRestTimer(90)" class="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white">จับ 90 วิ</button>
+                <button onclick="resetRestTimer()" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">หยุด</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="workoutListContainer" class="space-y-2.5 max-h-80 overflow-y-auto custom-scroll pr-1"></div>
+        </div>
+
+        <div class="mt-3 pt-3 border-t border-slate-800/80 flex justify-between items-center">
+          <button onclick="addWorkoutSlot()" class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 transition">
+            + เพิ่มท่าฝึกวันนี้
+          </button>
+          <button onclick="resetCurrentDayToDefault()" class="text-xs text-rose-400 hover:text-rose-300 underline">
+            รีเซ็ตเฉพาะวันนี้กลับค่าเริ่มต้น
+          </button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Cloud Sync Setup Modal -->
+  <div id="cloudModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-filter backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-lg w-full p-6 border border-slate-700 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-lg text-white flex items-center gap-2">☁️ ตั้งค่า Cloud Sync (คอม ⇄ มือถือ)</h3>
+        <button onclick="closeCloudModal()" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+
+      <p class="text-xs text-slate-300 leading-relaxed">
+        เลือกวิธีซิงก์ข้อมูลที่คุณสะดวกที่สุด เมื่อคุณแก้เวลาตื่นหรือติ๊กดื่มน้ำในคอม ข้อมูลจะอัปเดตไปที่มือถืออัตโนมัติค่ะ
+      </p>
+
+      <!-- Option 1: Instant Sync Key (Zero-Setup Cloud KV) -->
+      <div class="p-4 rounded-xl bg-slate-900/90 border border-indigo-500/40 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-indigo-300">วิธีที่ 1: Instant Cloud Key (ง่ายที่สุด ไม่ต้องสมัครเว็บใดๆ)</span>
+          <span class="text-[11px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">แนะนำ</span>
+        </div>
+        <p class="text-xs text-slate-400">
+          แค่ตั้ง <b>"รหัสซิงก์ส่วนตัว"</b> ให้เหมือนกันทั้งในคอมและในมือถือ (ตั้งให้เดายากนิดนึง เช่น <code class="text-emerald-300">rath-if-2026-secret</code>)
+        </p>
+        <div class="flex gap-2">
+          <input type="text" id="syncKeyInput" placeholder="เช่น rath-if-2026-secret" class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+          <button onclick="generateRandomSyncKey()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300">สุ่มรหัส</button>
+        </div>
+      </div>
+
+      <!-- Option 2: Custom Firebase Realtime DB URL (Optional) -->
+      <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+        <span class="text-xs font-bold text-emerald-300 block">วิธีที่ 2: ใช้ Firebase Realtime Database ส่วนตัว (ทางเลือกเสริม)</span>
+        <p class="text-xs text-slate-400">
+          หากคุณมีโปรเจกต์ Firebase ของตัวเอง วางลิงก์ Database URL ที่นี่ได้เลย (ถ้าเว้นว่างไว้ แอปจะใช้ระบบ Instant Cloud Key ด้านบนแทน)
+        </p>
+        <input type="text" id="firebaseUrlInput" placeholder="https://your-project-default-rtdb.asia-southeast1.firebasedatabase.app" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+      </div>
+
+      <!-- Save & Sync Actions -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+        <button onclick="saveCloudConfigAndSync()" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm shadow-lg shadow-emerald-600/25 transition">
+          💾 บันทึก & เชื่อมต่อ Cloud ทันที
+        </button>
+        <button onclick="pullFromCloud(true)" class="py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-sm transition">
+          📥 ดึงข้อมูลล่าสุดจาก Cloud
+        </button>
+      </div>
+
+      <!-- Option 3: Manual JSON Export / Import Backup -->
+      <div class="pt-4 border-t border-slate-800 space-y-2">
+        <span class="text-xs font-semibold text-slate-400 block">📦 สำรองข้อมูลด้วยโค้ด JSON (คัดลอกส่งผ่าน LINE ได้ทันที)</span>
+        <div class="flex gap-2">
+          <button onclick="exportJsonToClipboard()" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200">
+            📋 คัดลอกข้อมูลทั้งหมด
+          </button>
+          <button onclick="importJsonFromPrompt()" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200">
+            📥 วางโค้ดข้อมูลที่คัดลอกมา
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. STATE & PER-DAY DEFAULT TEMPLATE
+    // ==========================================
+    const STORAGE_KEY = 'IF_FITNESS_CLOUD_DB_V2';
+    const CLOUD_CFG_KEY = 'IF_FITNESS_CLOUD_CFG_V2';
+
+    let currentDateStr = getTodayString();
+    let appDatabase = {
+      updatedAt: 0,
+      days: {}
+    };
+
+    let cloudConfig = {
+      syncKey: '',
+      firebaseUrl: '',
+      autoSync: true
+    };
+
+    let waterAlarmActive = false;
+    let waterAlarmInterval = null;
+    let walkSecondsLeft = 30 * 60;
+    let walkInterval = null;
+    let restSecondsLeft = 90;
+    let restInterval = null;
+    let syncDebounceTimer = null;
+
+    function getTodayString() {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function createDefaultDaySchedule() {
+      return {
+        wakeTime: '08:00',
+        sleepTime: '00:00',
+        ifFastHours: 16,
+        ifEatHours: 8,
+        eatStart: '11:00',
+        eatEnd: '19:00',
+        weight: '',
+        waterSlots: [
+          { time: '08:00', label: 'ตื่นนอน (กระตุ้นระบบเผาผลาญ)', ml: 500, done: false },
+          { time: '09:00', label: 'หลังเดินใส่เสื้อถ่วงน้ำหนักเสร็จ', ml: 500, done: false },
+          { time: '10:30', label: 'จิบระหว่างทำงานช่วงเช้า', ml: 300, done: false },
+          { time: '11:30', label: 'หลังมื้อเปิดหน้าต่าง IF (มื้อแรก)', ml: 400, done: false },
+          { time: '14:30', label: 'คู่กับมื้อว่างช่วงบ่าย', ml: 400, done: false },
+          { time: '17:30', label: 'จิบระหว่าง/หลังฝึกเวทเทรนนิ่ง', ml: 500, done: false },
+          { time: '19:00', label: 'ปิดหน้าต่าง IF มื้อเย็น (งดดื่มเยอะใกล้เวลานอน)', ml: 400, done: false }
+        ],
+        meals: [
+          { time: '08:15', name: 'กาแฟดำล้วน (ไม่ใส่น้ำตาล/นม - ไม่หลุด IF)', cal: 5, protein: 0, done: false },
+          { time: '11:00', name: 'มื้อที่ 1: อกไก่ 200g + ไข่ต้ม 2 ฟอง + ข้าวกล้อง 1.5 ทัพพี', cal: 650, protein: 60, done: false },
+          { time: '14:30', name: 'มื้อว่าง: มอคค่าเย็นหล่อฮั่งก๊วยนมอัลมอนด์ + ไข่ต้ม 2 ฟอง/เทมเป้', cal: 320, protein: 28, done: false },
+          { time: '18:00', name: 'มื้อปิด IF: อกไก่ 150g + เทมเป้ 100g + ไข่ 2 ฟอง + ข้าวกล้อง 1 ทัพพี', cal: 720, protein: 72, done: false }
+        ],
+        workouts: [
+          { start: '08:30', end: '09:00', name: 'เดินใส่เสื้อถ่วงน้ำหนัก (Weighted Vest 8 กก.) โซน 2', sets: '30-60 นาที', done: false },
+          { start: '17:15', end: '17:35', name: 'Dumbbell Bench Press บนเก้าอี้ Bench', sets: '4 เซต x 10-12 ครั้ง', done: false },
+          { start: '17:35', end: '17:50', name: 'Single-Arm Dumbbell Row (ดึงหลังบนม้านั่ง)', sets: '4 เซต x 12 ครั้ง/ข้าง', done: false },
+          { start: '17:50', end: '18:05', name: 'Kettlebell Goblet Squat + Kettlebell Swing', sets: '4 เซต x 12-15 ครั้ง', done: false }
+        ]
+      };
+    }
+
+    function getDayData(dateStr = currentDateStr) {
+      if (!appDatabase.days[dateStr]) {
+        appDatabase.days[dateStr] = createDefaultDaySchedule();
+      }
+      return appDatabase.days[dateStr];
+    }
+
+    // ==========================================
+    // 2. CLOUD SYNC ENGINE (INSTANT KV & FIREBASE)
+    // ==========================================
+    function getCloudEndpoint() {
+      const key = (cloudConfig.syncKey || '').trim().replace(/[^a-zA-Z0-9_-]/g, '');
+      if (!key) return null;
+      if (cloudConfig.firebaseUrl && cloudConfig.firebaseUrl.trim().startsWith('https://')) {
+        const base = cloudConfig.firebaseUrl.trim().replace(/\/$/, '');
+        return `${base}/if_tracker_${key}.json`;
+      }
+      // Public Free KV Cloud Store fallback (KeyVal / npoint compatible REST JSON store)
+      return `https://kvdb.io/A6Xy9k2mN8pQr4sT1vW3zB/if_tracker_${key}`;
+    }
+
+    function updateSyncStatusUI(state, message) {
+      const dot = document.getElementById('syncDot');
+      const txt = document.getElementById('syncStatusText');
+      if (state === 'synced') {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        txt.textContent = message || 'Cloud Synced';
+      } else if (state === 'syncing') {
+        dot.className = 'w-2 h-2 rounded-full bg-sky-400 animate-ping';
+        txt.textContent = message || 'กำลังซิงก์...';
+      } else if (state === 'error') {
+        dot.className = 'w-2 h-2 rounded-full bg-rose-400';
+        txt.textContent = message || 'ออฟไลน์ (บันทึกในเครื่อง)';
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        txt.textContent = message || 'Local Mode';
+      }
+    }
+
+    function saveLocalAndScheduleCloudPush() {
+      appDatabase.updatedAt = Date.now();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appDatabase));
+      renderAll();
+
+      if (cloudConfig.syncKey) {
+        updateSyncStatusUI('syncing', 'กำลังบันทึกขึ้น Cloud...');
+        clearTimeout(syncDebounceTimer);
+        syncDebounceTimer = setTimeout(() => {
+          pushToCloud();
+        }, 900);
+      }
+    }
+
+    async function pushToCloud() {
+      const endpoint = getCloudEndpoint();
+      if (!endpoint) return;
+      try {
+        updateSyncStatusUI('syncing', 'กำลังอัปโหลด...');
+        const method = endpoint.includes('firebasedatabase.app') || endpoint.includes('firebaseio.com') ? 'PUT' : 'POST';
+        const res = await fetch(endpoint, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(appDatabase)
+        });
+        if (res.ok) {
+          const nowStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+          updateSyncStatusUI('synced', `ซิงก์ล่าสุด ${nowStr}`);
+        } else {
+          updateSyncStatusUI('error', 'ซิงก์ไม่สำเร็จ');
+        }
+      } catch (e) {
+        updateSyncStatusUI('error', 'โหมดออฟไลน์');
+      }
+    }
+
+    async function pullFromCloud(forceOverwrite = false) {
+      const endpoint = getCloudEndpoint();
+      if (!endpoint) {
+        updateSyncStatusUI('local', 'Local Mode');
+        return;
+      }
+      try {
+        updateSyncStatusUI('syncing', 'กำลังเช็กข้อมูล Cloud...');
+        const res = await fetch(endpoint, { cache: 'no-store' });
+        if (!res.ok) {
+          if (res.status === 404) {
+            await pushToCloud();
+            return;
+          }
+          updateSyncStatusUI('error', 'เชื่อมต่อไม่ได้');
+          return;
+        }
+        const remoteData = await res.json();
+        if (remoteData && remoteData.days) {
+          if (forceOverwrite || (remoteData.updatedAt || 0) > (appDatabase.updatedAt || 0)) {
+            appDatabase = remoteData;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appDatabase));
+            renderAll();
+          } else if ((appDatabase.updatedAt || 0) > (remoteData.updatedAt || 0)) {
+            await pushToCloud();
+            return;
+          }
+          const nowStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+          updateSyncStatusUI('synced', `ซิงก์ล่าสุด ${nowStr}`);
+        }
+      } catch (e) {
+        updateSyncStatusUI('error', 'โหมดออฟไลน์');
+      }
+    }
+
+    function triggerManualSync() {
+      if (!cloudConfig.syncKey) {
+        openCloudModal();
+        return;
+      }
+      pullFromCloud(false);
+    }
+
+    // ==========================================
+    // 3. UI RENDERING FUNCTIONS
+    // ==========================================
+    function renderAll() {
+      const day = getDayData(currentDateStr);
+      document.getElementById('datePicker').value = currentDateStr;
+      document.getElementById('wakeTimeInput').value = day.wakeTime || '08:00';
+      document.getElementById('sleepTimeInput').value = day.sleepTime || '00:00';
+      document.getElementById('eatStartInput').value = day.eatStart || '11:00';
+      document.getElementById('eatEndInput').value = day.eatEnd || '19:00';
+      document.getElementById('dailyWeightInput').value = day.weight || '';
+
+      document.getElementById('ifModeBadge').textContent = `${day.ifFastHours}/${day.ifEatHours}`;
+      document.getElementById('btn168').className = day.ifFastHours === 16
+        ? 'text-xs px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-semibold'
+        : 'text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700';
+      document.getElementById('btn186').className = day.ifFastHours === 18
+        ? 'text-xs px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-semibold'
+        : 'text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700';
+
+      renderWaterList(day);
+      renderMealList(day);
+      renderWorkoutList(day);
+      renderMasterTimeline(day);
+      updateIfRealtimeTimer();
+    }
+
+    function renderWaterList(day) {
+      const container = document.getElementById('waterListContainer');
+      container.innerHTML = '';
+      let totalDrank = 0;
+      let totalGoal = 0;
+
+      day.waterSlots.forEach((slot, idx) => {
+        totalGoal += Number(slot.ml) || 0;
+        if (slot.done) totalDrank += Number(slot.ml) || 0;
+
+        const row = document.createElement('div');
+        row.className = `flex items-center gap-2 p-2.5 rounded-xl border transition ${
+          slot.done ? 'bg-sky-950/30 border-sky-500/30 text-slate-400' : 'bg-slate-900/75 border-slate-800'
+        }`;
+        row.innerHTML = `
+          <input type="checkbox" ${slot.done ? 'checked' : ''} onchange="toggleWaterDone(${idx})" class="w-4 h-4 accent-sky-500 rounded cursor-pointer" />
+          <input type="time" value="${slot.time}" onchange="editWaterSlot(${idx}, 'time', this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono text-sky-300" />
+          <input type="text" value="${slot.label}" onchange="editWaterSlot(${idx}, 'label', this.value)" class="flex-1 min-w-0 bg-transparent text-xs focus:outline-none focus:border-b border-sky-500 ${slot.done ? 'line-through' : 'text-slate-200'}" />
+          <div class="flex items-center gap-1">
+            <input type="number" step="50" value="${slot.ml}" onchange="editWaterSlot(${idx}, 'ml', this.value)" class="w-16 bg-slate-800 border border-slate-700 rounded-lg px-1.5 py-0.5 text-xs text-right font-semibold text-sky-300" />
+            <span class="text-[11px] text-slate-400">มล.</span>
+          </div>
+          <button onclick="removeWaterSlot(${idx})" class="text-slate-500 hover:text-rose-400 text-xs px-1" title="ลบ">&times;</button>
+        `;
+        container.appendChild(row);
+      });
+
+      const pct = Math.min(100, Math.round((totalDrank / 3000) * 100));
+      document.getElementById('waterTotalBadge').textContent = `${totalDrank.toLocaleString()} / 3,000 มล. (${pct}%)`;
+      document.getElementById('waterProgressBar').style.width = `${pct}%`;
+    }
+
+    function renderMealList(day) {
+      const container = document.getElementById('mealListContainer');
+      container.innerHTML = '';
+      let calSum = 0;
+      let proSum = 0;
+
+      day.meals.forEach((meal, idx) => {
+        if (meal.done) {
+          calSum += Number(meal.cal) || 0;
+          proSum += Number(meal.protein) || 0;
+        }
+        const row = document.createElement('div');
+        row.className = `p-3 rounded-xl border transition space-y-2 ${
+          meal.done ? 'bg-emerald-950/25 border-emerald-500/30 text-slate-400' : 'bg-slate-900/75 border-slate-800'
+        }`;
+        row.innerHTML = `
+          <div class="flex items-center gap-2">
+            <input type="checkbox" ${meal.done ? 'checked' : ''} onchange="toggleMealDone(${idx})" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer" />
+            <input type="time" value="${meal.time}" onchange="editMealSlot(${idx}, 'time', this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono text-emerald-300" />
+            <input type="text" value="${meal.name}" onchange="editMealSlot(${idx}, 'name', this.value)" class="flex-1 min-w-0 bg-transparent text-xs font-medium focus:outline-none focus:border-b border-emerald-500 ${meal.done ? 'line-through' : 'text-slate-100'}" />
+            <button onclick="removeMealSlot(${idx})" class="text-slate-500 hover:text-rose-400 text-xs px-1">&times;</button>
+          </div>
+          <div class="flex items-center justify-end gap-3 text-[11px] pl-6">
+            <div class="flex items-center gap-1">
+              <span class="text-slate-400">พลังงาน:</span>
+              <input type="number" value="${meal.cal}" onchange="editMealSlot(${idx}, 'cal', this.value)" class="w-16 bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-right text-amber-300 font-semibold" />
+              <span class="text-slate-400">kcal</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-slate-400">โปรตีน:</span>
+              <input type="number" value="${meal.protein}" onchange="editMealSlot(${idx}, 'protein', this.value)" class="w-14 bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-right text-emerald-300 font-semibold" />
+              <span class="text-slate-400">g</span>
+            </div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+
+      document.getElementById('calTotalBadge').textContent = `${calSum.toLocaleString()} / 1,950 kcal`;
+      document.getElementById('proTotalBadge').textContent = `โปรตีน ${proSum} / 165g`;
+    }
+
+    function renderWorkoutList(day) {
+      const container = document.getElementById('workoutListContainer');
+      container.innerHTML = '';
+      let doneCount = 0;
+
+      day.workouts.forEach((wk, idx) => {
+        if (wk.done) doneCount++;
+        const row = document.createElement('div');
+        row.className = `p-3 rounded-xl border transition space-y-2 ${
+          wk.done ? 'bg-indigo-950/30 border-indigo-500/30 text-slate-400' : 'bg-slate-900/75 border-slate-800'
+        }`;
+        row.innerHTML = `
+          <div class="flex flex-wrap items-center gap-2">
+            <input type="checkbox" ${wk.done ? 'checked' : ''} onchange="toggleWorkoutDone(${idx})" class="w-4 h-4 accent-indigo-500 rounded cursor-pointer" />
+            <input type="time" value="${wk.start}" onchange="editWorkoutSlot(${idx}, 'start', this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono text-indigo-300" />
+            <span class="text-xs text-slate-500">-</span>
+            <input type="time" value="${wk.end}" onchange="editWorkoutSlot(${idx}, 'end', this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono text-indigo-300" />
+            <input type="text" value="${wk.sets}" onchange="editWorkoutSlot(${idx}, 'sets', this.value)" class="w-32 bg-slate-800 border border-slate-700 rounded-lg px-2 py-0.5 text-xs text-amber-300 font-medium" />
+            <button onclick="removeWorkoutSlot(${idx})" class="ml-auto text-slate-500 hover:text-rose-400 text-xs px-1">&times;</button>
+          </div>
+          <div class="pl-6">
+            <input type="text" value="${wk.name}" onchange="editWorkoutSlot(${idx}, 'name', this.value)" class="w-full bg-transparent text-xs font-medium focus:outline-none focus:border-b border-indigo-500 ${wk.done ? 'line-through' : 'text-slate-100'}" />
+          </div>
+        `;
+        container.appendChild(row);
+      });
+
+      document.getElementById('workoutDoneBadge').textContent = `${doneCount}/${day.workouts.length} รายการ`;
+    }
+
+    function renderMasterTimeline(day) {
+      const container = document.getElementById('masterTimeline');
+      container.innerHTML = '';
+
+      const events = [];
+      events.push({ time: day.wakeTime, icon: '☀️', title: 'ตื่นนอน', color: 'border-amber-500/40 bg-amber-500/10 text-amber-300' });
+      events.push({ time: day.eatStart, icon: '🍽️', title: 'เปิดหน้าต่าง IF', color: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' });
+      events.push({ time: day.eatEnd, icon: '🔒', title: 'ปิดหน้าต่าง IF', color: 'border-rose-500/40 bg-rose-500/10 text-rose-300' });
+
+      day.workouts.forEach(w => {
+        events.push({
+          time: w.start,
+          icon: '🏋️‍♂️',
+          title: `${w.name.substring(0, 22)} (${w.start}-${w.end})`,
+          color: w.done ? 'border-slate-700 bg-slate-800/40 text-slate-500 line-through' : 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300'
+        });
+      });
+
+      day.meals.forEach(m => {
+        events.push({
+          time: m.time,
+          icon: '🍗',
+          title: m.name.substring(0, 22),
+          color: m.done ? 'border-slate-700 bg-slate-800/40 text-slate-500 line-through' : 'border-teal-500/40 bg-teal-500/10 text-teal-300'
+        });
+      });
+
+      events.sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
+
+      events.forEach(ev => {
+        const chip = document.createElement('div');
+        chip.className = `shrink-0 px-3 py-2 rounded-xl border text-xs flex items-center gap-2 ${ev.color}`;
+        chip.innerHTML = `<span class="font-mono font-bold">${ev.time}</span> <span>${ev.icon} ${ev.title}</span>`;
+        container.appendChild(chip);
+      });
+    }
+
+    // ==========================================
+    // 4. PER-DAY SCHEDULE EDITING & PRESETS
+    // ==========================================
+    function changeDate(offsetDays) {
+      const dt = new Date(currentDateStr + 'T00:00:00');
+      dt.setDate(dt.getDate() + offsetDays);
+      const yyyy = dt.getFullYear();
+      const mm = String(dt.getMonth() + 1).padStart(2, '0');
+      const dd = String(dt.getDate()).padStart(2, '0');
+      currentDateStr = `${yyyy}-${mm}-${dd}`;
+      renderAll();
+    }
+
+    function onDatePick(val) {
+      if (val) {
+        currentDateStr = val;
+        renderAll();
+      }
+    }
+
+    function goToToday() {
+      currentDateStr = getTodayString();
+      renderAll();
+    }
+
+    function updateWakeSleepTime() {
+      const day = getDayData();
+      day.wakeTime = document.getElementById('wakeTimeInput').value;
+      day.sleepTime = document.getElementById('sleepTimeInput').value;
+      saveLocalAndScheduleCloudPush();
+    }
+
+    function addMinutesToTime(timeStr, minsToAdd) {
+      const [hh, mm] = (timeStr || '08:00').split(':').map(Number);
+      const total = (hh * 60 + mm + minsToAdd + 1440) % 1440;
+      const nh = String(Math.floor(total / 60)).padStart(2, '0');
+      const nm = String(total % 60).padStart(2, '0');
+      return `${nh}:${nm}`;
+    }
+
+    function autoShiftByWakeTime() {
+      const day = getDayData();
+      const wake = day.wakeTime || '08:00';
+      if (day.workouts.length > 0) {
+        day.workouts[0].start = addMinutesToTime(wake, 15);
+        day.workouts[0].end = addMinutesToTime(wake, 60);
+      }
+      if (day.waterSlots.length >= 2) {
+        day.waterSlots[0].time = wake;
+        day.waterSlots[1].time = addMinutesToTime(wake, 60);
+      }
+      if (day.meals.length > 0) {
+        day.meals[0].time = addMinutesToTime(wake, 15);
+      }
+      saveLocalAndScheduleCloudPush();
+    }
+
+    function applyPreset(presetName) {
+      const day = getDayData();
+      if (presetName === 'early04') {
+        day.wakeTime = '04:00';
+        day.sleepTime = '22:00';
+        day.eatStart = '10:00';
+        day.eatEnd = '18:00';
+        if (day.workouts[0]) {
+          day.workouts[0].start = '04:00';
+          day.workouts[0].end = '05:00';
+          day.workouts[0].sets = '60 นาที';
+        }
+        day.waterSlots[0].time = '04:00';
+        day.waterSlots[1].time = '05:00';
+        day.waterSlots[2].time = '08:00';
+        day.waterSlots[3].time = '10:30';
+        day.meals[0].time = '05:15';
+        day.meals[1].time = '10:00';
+        day.meals[2].time = '14:00';
+        day.meals[3].time = '17:30';
+        walkSecondsLeft = 60 * 60;
+        updateWalkTimerDisplay();
+      } else if (presetName === 'nightLift') {
+        day.wakeTime = '08:00';
+        day.sleepTime = '00:00';
+        day.eatStart = '11:00';
+        day.eatEnd = '19:00';
+        day.workouts.forEach((w, idx) => {
+          if (idx === 0) { w.start = '08:30'; w.end = '09:00'; }
+          if (idx === 1) { w.start = '20:00'; w.end = '20:20'; }
+          if (idx === 2) { w.start = '20:20'; w.end = '20:40'; }
+          if (idx === 3) { w.start = '20:40'; w.end = '21:00'; }
+        });
+      } else {
+        appDatabase.days[currentDateStr] = createDefaultDaySchedule();
+      }
+      saveLocalAndScheduleCloudPush();
+    }
+
+    function setIfProtocol(fastH, eatH) {
+      const day = getDayData();
+      day.ifFastHours = fastH;
+      day.ifEatHours = eatH;
+      day.eatEnd = addMinutesToTime(day.eatStart, eatH * 60);
+      saveLocalAndScheduleCloudPush();
+    }
+
+    function updateEatingWindow(which) {
+      const day = getDayData();
+      if (which === 'start') {
+        day.eatStart = document.getElementById('eatStartInput').value;
+        day.eatEnd = addMinutesToTime(day.eatStart, day.ifEatHours * 60);
+      } else {
+        day.eatEnd = document.getElementById('eatEndInput').value;
+      }
+      saveLocalAndScheduleCloudPush();
+    }
+
+    function updateDailyWeight(val) {
+      const day = getDayData();
+      day.weight = val;
+      saveLocalAndScheduleCloudPush();
+    }
+
+    // Checklist CRUD handlers
+    function toggleWaterDone(idx) {
+      const day = getDayData();
+      day.waterSlots[idx].done = !day.waterSlots[idx].done;
+      saveLocalAndScheduleCloudPush();
+    }
+    function editWaterSlot(idx, field, val) {
+      const day = getDayData();
+      day.waterSlots[idx][field] = field === 'ml' ? Number(val) : val;
+      saveLocalAndScheduleCloudPush();
+    }
+    function addWaterSlot() {
+      const day = getDayData();
+      day.waterSlots.push({ time: '16:00', label: 'ดื่มน้ำเพิ่มเติม', ml: 300, done: false });
+      saveLocalAndScheduleCloudPush();
+    }
+    function removeWaterSlot(idx) {
+      const day = getDayData();
+      day.waterSlots.splice(idx, 1);
+      saveLocalAndScheduleCloudPush();
+    }
+
+    function toggleMealDone(idx) {
+      const day = getDayData();
+      day.meals[idx].done = !day.meals[idx].done;
+      saveLocalAndScheduleCloudPush();
+    }
+    function editMealSlot(idx, field, val) {
+      const day = getDayData();
+      day.meals[idx][field] = (field === 'cal' || field === 'protein') ? Number(val) : val;
+      saveLocalAndScheduleCloudPush();
+    }
+    function addMealSlot() {
+      const day = getDayData();
+      day.meals.push({ time: '15:30', name: 'เมนูเสริมโปรตีน', cal: 200, protein: 25, done: false });
+      saveLocalAndScheduleCloudPush();
+    }
+    function removeMealSlot(idx) {
+      const day = getDayData();
+      day.meals.splice(idx, 1);
+      saveLocalAndScheduleCloudPush();
+    }
+
+    function toggleWorkoutDone(idx) {
+      const day = getDayData();
+      day.workouts[idx].done = !day.workouts[idx].done;
+      if (day.workouts[idx].done && idx > 0) {
+        startRestTimer(90);
+      }
+      saveLocalAndScheduleCloudPush();
+    }
+    function editWorkoutSlot(idx, field, val) {
+      const day = getDayData();
+      day.workouts[idx][field] = val;
+      saveLocalAndScheduleCloudPush();
+    }
+    function addWorkoutSlot() {
+      const day = getDayData();
+      day.workouts.push({ start: '20:00', end: '20:30', name: 'ฝึกเวทเทรนนิ่ง / ยืดเหยียดบนเสื่อโยคะ', sets: '3 เซต x 12 ครั้ง', done: false });
+      saveLocalAndScheduleCloudPush();
+    }
+    function removeWorkoutSlot(idx) {
+      const day = getDayData();
+      day.workouts.splice(idx, 1);
+      saveLocalAndScheduleCloudPush();
+    }
+    function resetCurrentDayToDefault() {
+      appDatabase.days[currentDateStr] = createDefaultDaySchedule();
+      saveLocalAndScheduleCloudPush();
+    }
+
+    // ==========================================
+    // 5. REAL-TIME IF 16/8 & WORKOUT TIMERS
+    // ==========================================
+    function updateIfRealtimeTimer() {
+      const now = new Date();
+      document.getElementById('currentClockDisplay').textContent = now.toLocaleTimeString('th-TH', { hour12: false });
+
+      const day = getDayData();
+      const [sh, sm] = (day.eatStart || '11:00').split(':').map(Number);
+      const [eh, em] = (day.eatEnd || '19:00').split(':').map(Number);
+
+      const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      const startSec = sh * 3600 + sm * 60;
+      const endSec = eh * 3600 + em * 60;
+
+      const isEatingWindow = startSec <= endSec
+        ? (nowSec >= startSec && nowSec < endSec)
+        : (nowSec >= startSec || nowSec < endSec);
+
+      const badge = document.getElementById('ifStateBadge');
+      const countdown = document.getElementById('ifCountdownText');
+      const subLabel = document.getElementById('ifSubLabel');
+      const bar = document.getElementById('ifProgressBar');
+
+      if (isEatingWindow) {
+        let remain = endSec - nowSec;
+        if (remain < 0) remain += 86400;
+        const totalWindow = (day.ifEatHours || 8) * 3600;
+        const pct = Math.min(100, Math.max(0, Math.round(((totalWindow - remain) / totalWindow) * 100)));
+
+        badge.className = 'inline-block text-xs font-semibold px-3 py-1 rounded-full mb-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        badge.textContent = '🟢 ช่วงทานอาหาร (Feeding Window)';
+        countdown.textContent = formatSecondsHMS(remain);
+        subLabel.textContent = `เหลือเวลาทานอีกจนถึง ${day.eatEnd} น. (เน้นโปรตีนให้ถึงเป้า)`;
+        bar.style.width = `${pct}%`;
+      } else {
+        let remain = startSec - nowSec;
+        if (remain < 0) remain += 86400;
+        const totalFast = (day.ifFastHours || 16) * 3600;
+        const pct = Math.min(100, Math.max(0, Math.round(((totalFast - remain) / totalFast) * 100)));
+
+        badge.className = 'inline-block text-xs font-semibold px-3 py-1 rounded-full mb-2 bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        badge.textContent = '🔥 ช่วง Fasting (กำลังเผาผลาญไขมัน)';
+        countdown.textContent = formatSecondsHMS(remain);
+        subLabel.textContent = `จะเปิดหน้าต่างมื้อแรกเวลา ${day.eatStart} น. (ดื่มน้ำเปล่า/กาแฟดำได้)`;
+        bar.style.width = `${pct}%`;
+      }
+    }
+
+    function formatSecondsHMS(sec) {
+      const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+      const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+      const s = String(sec % 60).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
+
+    function updateWalkTimerDisplay() {
+      const m = String(Math.floor(walkSecondsLeft / 60)).padStart(2, '0');
+      const s = String(walkSecondsLeft % 60).padStart(2, '0');
+      document.getElementById('walkTimerDisplay').textContent = `${m}:${s}`;
+    }
+
+    function toggleWalkTimer() {
+      const btn = document.getElementById('walkTimerBtn');
+      if (walkInterval) {
+        clearInterval(walkInterval);
+        walkInterval = null;
+        btn.textContent = 'เริ่ม';
+      } else {
+        btn.textContent = 'หยุดพัก';
+        walkInterval = setInterval(() => {
+          if (walkSecondsLeft > 0) {
+            walkSecondsLeft--;
+            updateWalkTimerDisplay();
+          } else {
+            clearInterval(walkInterval);
+            walkInterval = null;
+            btn.textContent = 'เริ่ม';
+            playNotificationChime(true);
+          }
+        }, 1000);
+      }
+    }
+
+    function resetWalkTimer() {
+      clearInterval(walkInterval);
+      walkInterval = null;
+      document.getElementById('walkTimerBtn').textContent = 'เริ่ม';
+      walkSecondsLeft = 30 * 60;
+      updateWalkTimerDisplay();
+    }
+
+    function startRestTimer(seconds) {
+      clearInterval(restInterval);
+      restSecondsLeft = seconds;
+      const disp = document.getElementById('restTimerDisplay');
+      restInterval = setInterval(() => {
+        if (restSecondsLeft > 0) {
+          restSecondsLeft--;
+          const m = String(Math.floor(restSecondsLeft / 60)).padStart(2, '0');
+          const s = String(restSecondsLeft % 60).padStart(2, '0');
+          disp.textContent = `${m}:${s}`;
+        } else {
+          clearInterval(restInterval);
+          restInterval = null;
+          disp.textContent = 'พร้อมลุยเซตต่อไป!';
+          playNotificationChime(true);
+        }
+      }, 1000);
+    }
+
+    function resetRestTimer() {
+      clearInterval(restInterval);
+      restInterval = null;
+      document.getElementById('restTimerDisplay').textContent = '01:30';
+    }
+
+    // ==========================================
+    // 6. WEB AUDIO CHIME & WATER REMINDER
+    // ==========================================
+    function playNotificationChime(forcePlay = false) {
+      const now = new Date();
+      const hhmm = now.getHours() * 100 + now.getMinutes();
+      if (!forcePlay && (hhmm >= 2130 || hhmm < 400)) return;
+
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.16); // A5
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.65);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.65);
+      } catch (e) {}
+    }
+
+    function toggleWaterAlarm() {
+      waterAlarmActive = !waterAlarmActive;
+      const btn = document.getElementById('waterAlarmBtn');
+      const info = document.getElementById('nextWaterAlertText');
+      if (waterAlarmActive) {
+        playNotificationChime(true);
+        btn.className = 'text-xs px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition';
+        btn.textContent = '🔔 เปิดเตือนน้ำดื่มอยู่ (ทุก 60 นาที)';
+        info.textContent = 'ระบบจะส่งเสียงเตือนทุก 60 นาที (และหยุดอัตโนมัติหลัง 21:30 น.)';
+        waterAlarmInterval = setInterval(() => {
+          playNotificationChime(false);
+        }, 60 * 60 * 1000);
+      } else {
+        clearInterval(waterAlarmInterval);
+        btn.className = 'text-xs px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-medium transition';
+        btn.textContent = '🔔 เปิดเสียงเตือนทุก 60 นาที';
+        info.textContent = 'ปิดเสียงเตือนอัตโนมัติอยู่';
+      }
+    }
+
+    // ==========================================
+    // 7. CLOUD MODAL & BACKUP CONTROLS
+    // ==========================================
+    function openCloudModal() {
+      document.getElementById('syncKeyInput').value = cloudConfig.syncKey || '';
+      document.getElementById('firebaseUrlInput').value = cloudConfig.firebaseUrl || '';
+      document.getElementById('cloudModal').classList.remove('hidden');
+    }
+
+    function closeCloudModal() {
+      document.getElementById('cloudModal').classList.add('hidden');
+    }
+
+    function generateRandomSyncKey() {
+      const rand = Math.random().toString(36).substring(2, 8);
+      document.getElementById('syncKeyInput').value = `if-rath-${rand}`;
+    }
+
+    async function saveCloudConfigAndSync() {
+      cloudConfig.syncKey = document.getElementById('syncKeyInput').value.trim();
+      cloudConfig.firebaseUrl = document.getElementById('firebaseUrlInput').value.trim();
+      localStorage.setItem(CLOUD_CFG_KEY, JSON.stringify(cloudConfig));
+      closeCloudModal();
+      if (cloudConfig.syncKey) {
+        await pullFromCloud(false);
+        await pushToCloud();
+      } else {
+        updateSyncStatusUI('local', 'Local Mode');
+      }
+    }
+
+    function exportJsonToClipboard() {
+      const dataStr = JSON.stringify(appDatabase);
+      navigator.clipboard.writeText(dataStr).then(() => {
+        alert('คัดลอกข้อมูลตารางทั้งหมดลงคลิปบอร์ดเรียบร้อยแล้วค่ะ! นำไปวางส่งใน LINE Keep หรือวางในมือถือได้เลย');
+      });
+    }
+
+    function importJsonFromPrompt() {
+      const raw = prompt('วางโค้ด JSON ที่คัดลอกมาจากอีกเครื่องที่นี่:');
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.days) {
+          appDatabase = parsed;
+          saveLocalAndScheduleCloudPush();
+          closeCloudModal();
+          alert('นำเข้าข้อมูลตารางสำเร็จเรียบร้อยค่ะ!');
+        }
+      } catch (e) {
+        alert('รูปแบบข้อมูลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้งนะคะ');
+      }
+    }
+
+    // ==========================================
+    // 8. INITIALIZATION & AUTO-POLLING
+    // ==========================================
+    function initApp() {
+      const savedData = localStorage.getItem(STORAGE_KEY);
+      if (savedData) {
+        try { appDatabase = JSON.parse(savedData); } catch (e) {}
+      }
+      const savedCfg = localStorage.getItem(CLOUD_CFG_KEY);
+      if (savedCfg) {
+        try { cloudConfig = JSON.parse(savedCfg); } catch (e) {}
+      }
+
+      renderAll();
+      setInterval(updateIfRealtimeTimer, 1000);
+
+      // Auto-sync when opening app or switching back to tab on mobile/desktop
+      if (cloudConfig.syncKey) {
+        pullFromCloud(false);
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && cloudConfig.syncKey) {
+          pullFromCloud(false);
+        }
+      });
+      // Periodic background sync check every 45 seconds
+      setInterval(() => {
+        if (cloudConfig.syncKey && document.visibilityState === 'visible') {
+          pullFromCloud(false);
+        }
+      }, 45000);
+    }
+
+    initApp();
+  </script>
+</body>
+</html>
